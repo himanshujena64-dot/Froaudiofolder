@@ -19,14 +19,18 @@ WORKFLOW:
    music/<mood>/ next to this script (or wherever you point --out).
 """
 
+import io
 import os
 import re
 import shutil
+import zipfile
 import streamlit as st
 
 MOODS = [
     "upbeat", "dramatic", "calm", "inspirational", "suspense",
     "sad", "romantic", "epic", "energetic", "nostalgic",
+    "mysterious", "triumphant", "playful", "heroic",
+    "chill", "horror", "corporate", "festive",
 ]
 
 # Keywords used to guess mood from filename / uploaded title text.
@@ -42,6 +46,14 @@ MOOD_KEYWORDS = {
     "epic":          ["epic", "trailer", "powerful", "cinematic", "heroic"],
     "energetic":     ["energetic", "driving", "action", "sport", "electronic", "beat"],
     "nostalgic":     ["nostalgic", "memories", "vintage", "warm", "retro"],
+    "mysterious":    ["mysterious", "mystery", "enigma", "curious", "puzzle"],
+    "triumphant":    ["triumphant", "triumph", "victory", "champion", "fanfare"],
+    "playful":       ["playful", "quirky", "silly", "cartoon", "whimsical"],
+    "heroic":        ["heroic", "hero", "courage", "brave", "underdog"],
+    "chill":         ["chill", "lofi", "lo-fi", "relaxed", "laid back", "laidback"],
+    "horror":        ["horror", "creepy", "dread", "haunted", "scary"],
+    "corporate":     ["corporate", "business", "professional", "explainer", "clean"],
+    "festive":       ["festive", "holiday", "celebration", "carnival", "festival"],
 }
 
 
@@ -103,5 +115,24 @@ if uploaded:
                 shutil.copyfileobj(fileobj, out)
             saved += 1
         st.success(f"Saved {saved} file(s) into their mood folders under '{out_dir}'.")
+
+        # Build a ZIP of the whole output folder in memory, so you can
+        # download it directly from the browser regardless of whether you
+        # can browse the server's filesystem (e.g. cloud-hosted Streamlit).
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, _, files in os.walk(out_dir):
+                for fname in files:
+                    filepath = os.path.join(root, fname)
+                    arcname = os.path.relpath(filepath, out_dir)
+                    zf.write(filepath, arcname)
+        zip_buffer.seek(0)
+
+        st.download_button(
+            "⬇️ Download entire music/ folder as ZIP",
+            data=zip_buffer,
+            file_name="music.zip",
+            mime="application/zip",
+        )
 else:
     st.info("Waiting for files — drag and drop your downloaded batch above.")
