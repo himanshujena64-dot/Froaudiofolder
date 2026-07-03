@@ -82,13 +82,17 @@ uploaded = st.file_uploader(
 
 if uploaded:
     st.subheader(f"{len(uploaded)} file(s) — confirm mood for each")
+    st.caption(
+        "⚠️ Tip: if you're on a free hosting tier, upload in batches of "
+        "15-20 files rather than all at once — large batches can run out "
+        "of memory and crash the app."
+    )
     decisions = {}
 
     for f in uploaded:
         guessed = guess_mood(f.name)
-        col1, col2 = st.columns([2, 1])
+        col1, col2, col3 = st.columns([2, 1, 1])
         with col1:
-            st.audio(f, format="audio/mp3")
             st.caption(f.name)
         with col2:
             default_idx = MOODS.index(guessed) if guessed else 0
@@ -101,6 +105,13 @@ if uploaded:
             )
             if guessed is None:
                 st.caption("⚠️ no guess — pick manually")
+        with col3:
+            # Lazy preview: only load/decode this one file's audio into
+            # memory when explicitly requested, instead of every file at
+            # once (which is what was crashing large batches).
+            if st.button("🔊 Preview", key=f"preview_{f.name}"):
+                f.seek(0)
+                st.audio(f.read(), format="audio/mp3")
         decisions[f.name] = (f, choice)
 
     st.divider()
